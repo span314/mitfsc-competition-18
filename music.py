@@ -104,10 +104,17 @@ class Start(object):
     def __init__(self, skater, event):
         self.skater = skater
         self.event = event
-        self.last_music_submission = None
+        self.music_submissions = []
         self.music_key = re.sub(r"\W+", "_", event.name + "  " + skater.full_name)
+        self.music_length = 0
         skater.starts.append(self)
         event.starts.append(self)
+
+    def last_music_submission(self):
+        if self.music_submissions:
+            return self.music_submissions[-1]
+        else:
+            return None
 
     def __repr__(self):
         return str(self)
@@ -170,7 +177,7 @@ def create_submission(skater, event_name, url, index,):
     submission = MusicSubmission(skater, event_name, url, index)
     start = find_start_for_skater(event_name, skater)
     if start:
-        start.last_music_submission = submission
+        start.music_submissions.append(submission)
     return submission
 
 
@@ -203,7 +210,7 @@ def read_submissions(skaters):
 
 
 def get_cached_music(start, subdir):
-    prefix = str(start.last_music_submission.index) + "_" + start.music_key
+    prefix = str(start.last_music_submission().index) + "_" + start.music_key
     for file_name in os.listdir(os.path.join(directory, subdir)):
         if os.path.splitext(file_name)[0] == prefix:
             return file_name
@@ -212,10 +219,10 @@ def get_cached_music(start, subdir):
 
 def download_music(start):
     # TODO use google drive API
-    submission = start.last_music_submission
-    if submission and not get_cached_music(start, "music_raw"):
+    if start.music_submissions and not get_cached_music(start, "music_raw"):
+        submission = start.last_music_submission()
         url = submission.url
-        parsed_url = urlparse.urlparse(submission.url)
+        parsed_url = urlparse.urlparse(url)
         if parsed_url.netloc == "drive.google.com":
             query_params = urlparse.parse_qs(parsed_url.query)
             url = "https://drive.google.com/uc?export=download&id=" + query_params["id"][0]
@@ -232,52 +239,52 @@ def download_music(start):
         file_extension = os.path.splitext(original_filename)[1]
         music_filename = str(submission.index) + "_" + start.music_key + file_extension
         music_path = os.path.join(directory, "music_raw", music_filename)
-        if os.path.exists(music_path):
-            print "Overriding music for " + music_filename
         shutil.copy(download_path, music_path)
 
 
 def convert_music(start):
-    submission = start.last_music_submission
-    if submission:
+    if start.music_submissions:
         input_file_name = get_cached_music(start, "music_raw")
         if input_file_name:
             input_path = os.path.join(directory, "music_raw", input_file_name)
             output_path = os.path.join(directory, "music", start.music_key + ".mp3")
-            # TODO smart overriding for not os.path.exists(output_path)
-            title = start.skater.full_name
-            album = start.event.name
-            file_extension = os.path.splitext(input_file_name)[1]
-            if file_extension.lower() in [".mp3", ".wav", ".m4a", ".aif", ".aiff", ".wma", ".mp2"]:
-                print ("Converting", input_file_name)
-                subprocess.call(["ffmpeg", "-y", "-i", input_path, "-acodec", "mp3", "-ab", "256k", output_path])
-            else:
-                print ("Unknown music format", input_file_name)
-                return
+            version = len(start.music_submissions)
+            if version > read_version(output_path):
+                if version > 1:
+                    print ("Overriding submission", output_path, version)
+                title = start.skater.full_name + " " + str(version)
+                album = start.event.name
+                file_extension = os.path.splitext(input_file_name)[1]
+                if file_extension.lower() in [".mp3", ".wav", ".m4a", ".aif", ".aiff", ".wma", ".mp2"]:
+                    print ("Converting", input_file_name)
+                    subprocess.call(["ffmpeg", "-y", "-i", input_path, "-acodec", "mp3", "-ab", "256k", output_path])
+                else:
+                    print ("Unknown music format", input_file_name)
+                    return
 
-            mp3_file = eyed3.load(output_path)
-            if not mp3_file:
-                print "Error: cannot open mp3 " + str(mp3_file)
-                return False
-            if mp3_file.tag:
-                mp3_file.tag.clear()
-            else:
-                mp3_file.initTag()
-            mp3_file.tag.title = unicode(title)
-            mp3_file.tag.album = unicode(album)
-            mp3_file.tag.save(output_path)
+                mp3_file = eyed3.load(output_path)
+                if mp3_file.tag:
+                    mp3_file.tag.clear()
+                else:
+                    mp3_file.initTag()
+                mp3_file.tag.title = unicode(title)
+                mp3_file.tag.album = unicode(album)
+                mp3_file.tag.save(output_path)
 
 
-def read_time(filename):
-    music_path = os.path.join(directory, "music", filename + ".mp3")
-    if not os.path.exists(music_path):
-        print "Error: file not found " + music_path
+def read_version(path):
+    if os.path.exists(path):
+        mp3_file = eyed3.load(path)
+        return int(mp3_file.tag.title.split()[-1])
+    else:
         return 0
-    mp3_file = eyed3.load(music_path)
-    if not mp3_file:
-        print "Error: cannot open mp3 " + str(mp3_file)
-        return 0
-    return mp3_file.info.time_secs
+
+
+def read_time(start):
+    music_path = os.path.join(directory, "music", start.music_key + ".mp3")
+    if os.path.exists(music_path):
+        mp3_file = eyed3.load(music_path)
+        start.music_length = mp3_file.info.time_secs
 
 
 # convert entries spreadsheet to events spreadsheet format
@@ -330,29 +337,31 @@ def read_entries(events_by_name):
     return starts, skaters
 
 
-def generate_report(event_entries):
+def generate_report(events):
     with open("template.html", "r") as template, open(os.path.join(directory, "music", "index.html"), "w") as file_out:
         for row in template:
             if row == "<!--CONTENT-->\n":
-                for event in sorted(event_entries.iterkeys()):
-                    file_out.write("<h2>" + event + "</h2>\n")
+                for event in events:
+                    file_out.write("<h2>" + event.name + "</h2>\n")
                     file_out.write("<table>\n")
                     file_out.write("<tr>\n")
                     file_out.write("<th>Skater</th>\n")
                     file_out.write("<th>University</th>\n")
                     file_out.write("<th>Music Length</th>\n")
+                    file_out.write("<th>Submit Count</th>\n")
                     file_out.write("<th>Music</th>\n")
                     file_out.write("</tr>\n")
 
-                    for entry in sorted(event_entries[event], key=lambda e: e["full_name"]):
-                        university = entry["University"].strip()
-                        scratch = entry["Scratch"]
-                        skater = entry["full_name"]
+                    for start in sorted(event.starts, key=lambda s: s.skater.full_name):
+                        university = "TODO"
+                        scratch = False
+                        skater = start.skater.full_name
                         music_length = ""
                         music = ""
-                        if "music_length" in entry and entry["music_length"] > 0:
-                            music_length = str(datetime.timedelta(seconds=entry["music_length"]))[3:]
-                            music = "<a href=" + entry["music_filename"] + ".mp3>mp3</a>"
+                        submit_count = str(len(start.music_submissions))
+                        if start.music_length > 0:
+                            music_length = str(datetime.timedelta(seconds=start.music_length))[3:]
+                            music = "<a href=" + start.music_key + ".mp3>mp3</a>"
                         if scratch:
                             file_out.write("<tr class='scratch'>\n")
                         else:
@@ -360,6 +369,7 @@ def generate_report(event_entries):
                         file_out.write("<td>" + skater + "</td>\n")
                         file_out.write("<td>" + university + "</td>\n")
                         file_out.write("<td>" + music_length + "</td>\n")
+                        file_out.write("<td>" + submit_count + "</td>\n")
                         file_out.write("<td>" + music + "</td>\n")
                         file_out.write("</tr>\n")
 
@@ -373,7 +383,7 @@ def debug_skater(skaters, name):
     print(skater)
     print(skater.starts)
     for start in skater.starts:
-        print start.last_music_submission
+        print start.last_music_submission()
 
 
 ############
@@ -408,19 +418,11 @@ def main():
         # download music files
         download_music(start)
         # convert music to mp3
-        # convert_music(start)
+        convert_music(start)
+        # read music length
+        read_time(start)
 
-    # TODO migrate
-    # # Read music lengths
-    # for event in event_entries:
-    #     for entry in event_entries[event]:
-    #         entry["full_name"] = entry["First Name"].strip() + " " + entry["Last Name"].strip()
-    #         if "music_filename" in entry:
-    #             entry["music_length"] = read_time(entry["music_filename"])
-    #
-
-
-    # generate_report(event_entries)
+    generate_report(events)
 
 
 if __name__ == "__main__":
