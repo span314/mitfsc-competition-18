@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import csv
 import datetime
-import eyed3  # mp3 tag editor
+import eyed3
 import os
 import re
 import shutil
@@ -52,6 +52,7 @@ class Skater(object):
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
+        self.university = ""
         # back-references
         self.starts = []
         # computed properties
@@ -98,6 +99,15 @@ class Skaters(object):
             skater = None
         return skater
 
+    def find_by_name_and_university(self, name, university):
+        if name in self.skaters_by_name:
+            skater = self.skaters_by_name[name]
+            if skater.university == university:
+                return skater
+            else:
+                print (skater.university, university)
+        return None
+
 
 class Start(object):
 
@@ -107,6 +117,7 @@ class Start(object):
         self.music_submissions = []
         self.music_key = re.sub(r"\W+", "_", event.name + "  " + skater.full_name)
         self.music_length = 0
+        self.confirmed = False
         skater.starts.append(self)
         event.starts.append(self)
 
@@ -165,19 +176,14 @@ def read_events():
     return events
 
 
-def find_start_for_skater(event, skater):
-    for start in skater.starts:
-        if event == start.event.short_name:
-            return start
-    else:
-        print ("Warning cannot find start", event, skater.starts)
-
-
 def create_submission(skater, event_name, url, index,):
     submission = MusicSubmission(skater, event_name, url, index)
-    start = find_start_for_skater(event_name, skater)
-    if start:
-        start.music_submissions.append(submission)
+    for start in skater.starts:
+        if event_name == start.event.short_name:
+            start.music_submissions.append(submission)
+            break
+    else:
+        print ("Warning cannot find start", event_name, skater.starts)
     return submission
 
 
@@ -255,7 +261,7 @@ def convert_music(start):
                 title = start.skater.full_name + " " + str(version)
                 album = start.event.name
                 file_extension = os.path.splitext(input_file_name)[1]
-                if file_extension.lower() in [".mp3", ".wav", ".m4a", ".aif", ".aiff", ".wma", ".mp2"]:
+                if file_extension.lower() in [".mp3", ".wav", ".m4a", ".aif", ".aiff", ".wma", ".mp2", ".m4v"]:
                     print ("Converting", input_file_name)
                     subprocess.call(["ffmpeg", "-y", "-i", input_path, "-acodec", "mp3", "-ab", "256k", output_path])
                 else:
@@ -288,8 +294,7 @@ def read_time(start):
 
 
 # convert entries spreadsheet to events spreadsheet format
-def normalize_event_name(entry):
-    event = entry["Event"].title().strip()
+def normalize_event_name(event):
     if "(Male)" in event:
         event = event.replace(" (Male)", "")
         male_event = True
@@ -302,39 +307,38 @@ def normalize_event_name(entry):
     if "Short Program" in event:
         level = event.split()[0]
         if male_event:
-            assert entry["Gender"] == "Male"
             return level + " Mens Short Program"
         else:
-            assert entry["Gender"] == "Female"
             return level + " Ladies Short Program"
     elif "Excel" in event or "Championship" in event:
         if male_event:
-            assert entry["Gender"] == "Male"
             return event + " Mens Freeskate"
         else:
-            assert entry["Gender"] == "Female"
             return event + " Ladies Freeskate"
     elif "Pattern Dance" in event:
-        return event.replace("Pattern Dance", "Solo Pattern Dance")
+        level = event.split()[0]
+        return level + " Solo Pattern Dance"
     else:  # Team Maneuvers or Solo Free Dance
         return event
 
 
 def read_entries(events_by_name):
-    starts = []
     skaters = Skaters()
     with open(os.path.join(directory, "entries.csv"), "r") as file_in:
         reader = csv.DictReader(file_in)
         for row in reader:
-            event = events_by_name[normalize_event_name(row)]
+            raw_event = row["Event"].title().strip()
+            event = events_by_name[normalize_event_name(raw_event)]
+            if event.gender:
+                assert event.gender == row["Gender"]
             usfs_number = row["USF #"].strip()
             first_name = row["First Name"].strip().title()
             last_name = row["Last Name"].strip().title()
             email = row["E-mail"].strip()
             skater = skaters.find_or_create(usfs_number, first_name, last_name, email)
-            start = Start(skater, event)
-            starts.append(start)
-    return starts, skaters
+            skater.university = row["University"].strip().title()
+            Start(skater, event)
+    return skaters
 
 
 def generate_report(events):
@@ -342,6 +346,11 @@ def generate_report(events):
         for row in template:
             if row == "<!--CONTENT-->\n":
                 for event in events:
+                    if not event.has_submitted_music:
+                        continue
+                    confirmed_starts = [start for start in event.starts if start.confirmed]
+                    if not confirmed_starts:
+                        continue
                     file_out.write("<h2>" + event.name + "</h2>\n")
                     file_out.write("<table>\n")
                     file_out.write("<tr>\n")
@@ -352,8 +361,8 @@ def generate_report(events):
                     file_out.write("<th>Music</th>\n")
                     file_out.write("</tr>\n")
 
-                    for start in sorted(event.starts, key=lambda s: s.skater.full_name):
-                        university = "TODO"
+                    for start in sorted(confirmed_starts, key=lambda s: s.skater.full_name):
+                        university = start.skater.university
                         scratch = False
                         skater = start.skater.full_name
                         music_length = ""
@@ -378,6 +387,33 @@ def generate_report(events):
                 file_out.write(row)
 
 
+def read_updated_entries(skaters, events_by_name):
+    with open(os.path.join(directory, "updated_entries.csv"), "r") as file_in:
+        reader = csv.DictReader(file_in)
+        event = None
+        for row in reader:
+            name = " ".join(row["Name"].split()).title()  # clean up whitespace
+            university = row["University"].strip().title()
+            if name:
+                if university:
+                    if event.category != "Team Maneuvers":
+                        skater = skaters.find_by_name_and_university(name, university)
+                        if not skater:
+                            # TODO handle this case
+                            print ("Unknown Skater", name, university, event.name)
+                            raise ValueError()
+                        for start in skater.starts:
+                            if start.event == event:
+                                start.confirmed = True
+                                break
+                        else:
+                            start = Start(skater, event)
+                            start.confirmed = True
+                            print ("Created new start", start, skater.starts)
+                else:  # event header row
+                    event = events_by_name[normalize_event_name(name)]
+
+
 def debug_skater(skaters, name):
     skater = skaters.find("", name, "")
     print(skater)
@@ -397,30 +433,33 @@ def main():
     events_by_name = {event.name: event for event in events}
 
     # read entries
-    starts, skaters = read_entries(events_by_name)
+    skaters = read_entries(events_by_name)
+    read_updated_entries(skaters, events_by_name)
 
-    # TODO use to google sheets api
-    # # Download Spreadsheet
-    # if os.path.exists(os.path.join(directory, "input.csv")) and use_cached_spreadsheet:
-    #     print "Using cached spreadsheet"
-    # else:
-    #     print "Downloading live spreadsheet"
-    #     key_path = os.path.join(directory, "key.txt")
-    #     with open(key_path, "r") as key_file:
-    #         spreadsheet_key = key_file.read().strip()
-    #     music_spreadsheet_url = "https://docs.google.com/spreadsheets/d/" + spreadsheet_key + "/export?format=csv"
-    #     urllib.urlretrieve(music_spreadsheet_url, input_spreadsheet_path)
+    # TODO use google sheets api
+    # Download Spreadsheet
+    input_spreadsheet_path = os.path.join(directory, "input.csv")
+    if os.path.exists(input_spreadsheet_path):
+        print "Using cached spreadsheet"
+    else:
+        print "Downloading live spreadsheet"
+        key_path = os.path.join(directory, "key.txt")
+        with open(key_path, "r") as key_file:
+            spreadsheet_key = key_file.read().strip()
+        music_spreadsheet_url = "https://docs.google.com/spreadsheets/d/" + spreadsheet_key + "/export?format=csv"
+        urllib.urlretrieve(music_spreadsheet_url, input_spreadsheet_path)
 
     # read submissions
-    submissions = read_submissions(skaters)
+    read_submissions(skaters)
 
-    for start in starts:
-        # download music files
-        download_music(start)
-        # convert music to mp3
-        convert_music(start)
-        # read music length
-        read_time(start)
+    for event in events:
+        for start in event.starts:
+            # download music files
+            download_music(start)
+            # convert music to mp3
+            convert_music(start)
+            # read music length
+            read_time(start)
 
     generate_report(events)
 
