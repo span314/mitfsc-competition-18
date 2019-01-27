@@ -1,55 +1,55 @@
-"Level","Gender","Category","Min Music Length","Max Music Length"
-"Excel High Beginner","Female","Freeskate",0,100
-"Excel Pre-Preliminary","Female","Freeskate",0,100
-"Excel Preliminary","Female","Freeskate",0,100
-"Excel Preliminary Plus","Female","Freeskate",0,100
-"Excel Pre-Juvenile","Female","Freeskate",0,130
-"Excel Pre-Juvenile Plus","Female","Freeskate",0,130
-"Excel Juvenile","Female","Freeskate",0,150
-"Excel Juvenile Plus","Female","Freeskate",0,150
-"Excel Intermediate","Female","Freeskate",0,170
-"Excel Novice","Female","Freeskate",0,190
-"Excel Junior","Female","Freeskate",0,220
-"Excel Senior","Female","Freeskate",0,250
-"Junior Championship","Female","Freeskate",200,220
-"Senior Championship","Female","Freeskate",230,250
-"Excel High Beginner","Male","Freeskate",0,100
-"Excel Pre-Preliminary","Male","Freeskate",0,100
-"Excel Preliminary","Male","Freeskate",0,100
-"Excel Preliminary Plus","Male","Freeskate",0,100
-"Excel Pre-Juvenile","Male","Freeskate",0,130
-"Excel Pre-Juvenile Plus","Male","Freeskate",0,130
-"Excel Juvenile","Male","Freeskate",0,150
-"Excel Juvenile Plus","Male","Freeskate",0,150
-"Excel Intermediate","Male","Freeskate",0,170
-"Excel Novice","Male","Freeskate",0,190
-"Excel Junior","Male","Freeskate",0,250
-"Excel Senior","Male","Freeskate",0,250
-"Junior Championship","Male","Freeskate",200,220
-"Senior Championship","Male","Freeskate",230,250
-"Juvenile","Female","Short Program",0,130
-"Intermediate","Female","Short Program",0,130
-"Novice","Female","Short Program",0,150
-"Junior","Female","Short Program",150,170
-"Senior","Female","Short Program",150,170
-"Juvenile","Male","Short Program",0,130
-"Intermediate","Male","Short Program",0,130
-"Novice","Male","Short Program",0,150
-"Junior","Male","Short Program",150,170
-"Senior","Male","Short Program",150,170
-"Juvenile",,"Solo Free Dance",90,110
-"Intermediate",,"Solo Free Dance",100,120
-"Novice",,"Solo Free Dance",110,130
-"Junior",,"Solo Free Dance",130,150
-"Senior",,"Solo Free Dance",150,170
-"Preliminary",,"Solo Pattern Dance",,
-"Juvenile",,"Solo Pattern Dance",,
-"Intermediate",,"Solo Pattern Dance",,
-"Novice",,"Solo Pattern Dance",,
-"Junior",,"Solo Pattern Dance",,
-"Senior",,"Solo Pattern Dance",,
-"Gold",,"Solo Pattern Dance",,
-"International",,"Solo Pattern Dance",,
-"Low",,"Team Maneuvers",,
-"Intermediate",,"Team Maneuvers",,
-"High",,"Team Maneuvers",,
+"Level","Gender","Category","Min Music Length","Max Music Length","Dance"
+"Excel High Beginner","Female","Freeskate",0,100,
+"Excel Pre-Preliminary","Female","Freeskate",0,100,
+"Excel Preliminary","Female","Freeskate",0,100,
+"Excel Preliminary Plus","Female","Freeskate",0,100,
+"Excel Pre-Juvenile","Female","Freeskate",0,130,
+"Excel Pre-Juvenile Plus","Female","Freeskate",0,130,
+"Excel Juvenile","Female","Freeskate",0,150,
+"Excel Juvenile Plus","Female","Freeskate",0,150,
+"Excel Intermediate","Female","Freeskate",0,170,
+"Excel Novice","Female","Freeskate",0,190,
+"Excel Junior","Female","Freeskate",0,220,
+"Excel Senior","Female","Freeskate",0,250,
+"Junior Championship","Female","Freeskate",200,220,
+"Senior Championship","Female","Freeskate",230,250,
+"Excel High Beginner","Male","Freeskate",0,100,
+"Excel Pre-Preliminary","Male","Freeskate",0,100,
+"Excel Preliminary","Male","Freeskate",0,100,
+"Excel Preliminary Plus","Male","Freeskate",0,100,
+"Excel Pre-Juvenile","Male","Freeskate",0,130,
+"Excel Pre-Juvenile Plus","Male","Freeskate",0,130,
+"Excel Juvenile","Male","Freeskate",0,150,
+"Excel Juvenile Plus","Male","Freeskate",0,150,
+"Excel Intermediate","Male","Freeskate",0,170,
+"Excel Novice","Male","Freeskate",0,190,
+"Excel Junior","Male","Freeskate",0,250,
+"Excel Senior","Male","Freeskate",0,250,
+"Junior Championship","Male","Freeskate",200,220,
+"Senior Championship","Male","Freeskate",230,250,
+"Juvenile","Female","Short Program",0,130,
+"Intermediate","Female","Short Program",0,130,
+"Novice","Female","Short Program",0,150,
+"Junior","Female","Short Program",150,170,
+"Senior","Female","Short Program",150,170,
+"Juvenile","Male","Short Program",0,130,
+"Intermediate","Male","Short Program",0,130,
+"Novice","Male","Short Program",0,150,
+"Junior","Male","Short Program",150,170,
+"Senior","Male","Short Program",150,170,
+"Juvenile",,"Solo Free Dance",90,110,
+"Intermediate",,"Solo Free Dance",100,120,
+"Novice",,"Solo Free Dance",110,130,
+"Junior",,"Solo Free Dance",130,150,
+"Senior",,"Solo Free Dance",150,170,
+"Preliminary",,"Solo Pattern Dance",,,"Canasta Tango"
+"Juvenile",,"Solo Pattern Dance",,,"Swing Dance"
+"Intermediate",,"Solo Pattern Dance",,,"Willow Waltz"
+"Novice",,"Solo Pattern Dance",,,"Foxtrot"
+"Junior",,"Solo Pattern Dance",,,"American Waltz"
+"Senior",,"Solo Pattern Dance",,,"Paso Doble"
+"Gold",,"Solo Pattern Dance",,,"Viennese Waltz"
+"International",,"Solo Pattern Dance",,,"Rhumba"
+"Low",,"Team Maneuvers",,,
+"Intermediate",,"Team Maneuvers",,,
+"High",,"Team Maneuvers",,,

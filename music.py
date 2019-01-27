@@ -18,7 +18,7 @@ directory = os.path.abspath("data")
 
 class Event(object):
 
-    def __init__(self, level, gender, category, min_music_length, max_music_length):
+    def __init__(self, level, gender, category, min_music_length, max_music_length, dance):
         self.level = level
         self.gender = gender
         self.category = category
@@ -37,6 +37,7 @@ class Event(object):
         self.name += category
         self.short_name = self.level + " " + self.category.replace("Solo ", "")
         self.has_submitted_music = (self.max_music_length > 0)
+        self.dance = dance
 
     def __repr__(self):
         return str(self)
@@ -170,7 +171,8 @@ def read_events():
                 gender=row["Gender"],
                 category=row["Category"],
                 min_music_length=int_or_zero(row["Min Music Length"]),
-                max_music_length=int_or_zero(row["Max Music Length"])
+                max_music_length=int_or_zero(row["Max Music Length"]),
+                dance=row["Dance"]
             )
             events.append(event)
     return events
@@ -354,26 +356,37 @@ def generate_report(events):
                 file_out.write("</p>\n")
             elif row == "<!--CONTENT-->\n":
                 for event in events:
-                    if not event.has_submitted_music:
-                        continue
                     confirmed_starts = [start for start in event.starts if start.confirmed]
                     if not confirmed_starts:
                         continue
                     file_out.write("<h2>" + event.name + "</h2>\n")
-                    if event.min_music_length or event.max_music_length:
+                    if event.dance:
+                        file_prefix = event.dance.lower().replace(" ", "_") + "_"
+                        file_out.write("<div class='dance-music'>")
+                        file_out.write(event.dance)
+                        file_out.write("<ul>")
+                        file_out.write("<li><a href='" + file_prefix + "0.mp3'>Warmup</a></li>")
+                        for i in range(1, 6):
+                            file_out.write("<li><a href='" + file_prefix + str(i) + ".mp3'>Track " + str(i) + "</a></li>")
+                        file_out.write("</ul>")
+                        file_out.write("</div>")
+                    if event.has_submitted_music:
                         file_out.write("<div class='time'>")
+                        file_out.write("Program Length: ")
                         if event.min_music_length:
-                            file_out.write("Min: " + format_time(event.min_music_length) + " ")
+                            file_out.write("Min " + format_time(event.min_music_length) + " ")
                         if event.max_music_length:
-                            file_out.write("Max: " + format_time(event.max_music_length))
+                            file_out.write("Max " + format_time(event.max_music_length))
                         file_out.write("</div>\n")
+                    file_out.write("<div>Entries below are NOT in starting order.</div>")
                     file_out.write("<table>\n")
                     file_out.write("<tr>\n")
                     file_out.write("<th>Skater</th>\n")
                     file_out.write("<th>University</th>\n")
-                    file_out.write("<th>Music Length</th>\n")
-                    file_out.write("<th>Submit Count</th>\n")
-                    file_out.write("<th>Music</th>\n")
+                    if event.has_submitted_music:
+                        file_out.write("<th>Music Length</th>\n")
+                        file_out.write("<th>Submit Count</th>\n")
+                        file_out.write("<th>Music</th>\n")
                     file_out.write("</tr>\n")
 
                     for start in sorted(confirmed_starts, key=lambda s: s.skater.full_name):
@@ -392,9 +405,10 @@ def generate_report(events):
                             file_out.write("<tr>\n")
                         file_out.write("<td>" + skater + "</td>\n")
                         file_out.write("<td>" + university + "</td>\n")
-                        file_out.write("<td>" + music_length + "</td>\n")
-                        file_out.write("<td>" + submit_count + "</td>\n")
-                        file_out.write("<td>" + music + "</td>\n")
+                        if event.has_submitted_music:
+                            file_out.write("<td>" + music_length + "</td>\n")
+                            file_out.write("<td>" + submit_count + "</td>\n")
+                            file_out.write("<td>" + music + "</td>\n")
                         file_out.write("</tr>\n")
 
                     file_out.write("</table>\n")
