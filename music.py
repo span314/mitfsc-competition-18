@@ -341,10 +341,18 @@ def read_entries(events_by_name):
     return skaters
 
 
+def format_time(seconds):
+    return str(datetime.timedelta(seconds=seconds))[3:]
+
+
 def generate_report(events):
     with open("template.html", "r") as template, open(os.path.join(directory, "music", "index.html"), "w") as file_out:
         for row in template:
-            if row == "<!--CONTENT-->\n":
+            if row == "<!--TIMESTAMP-->\n":
+                file_out.write("<p>Last Updated: ")
+                file_out.write(datetime.datetime.now().strftime("%A, %B %d %I:%M %P"))
+                file_out.write("</p>\n")
+            elif row == "<!--CONTENT-->\n":
                 for event in events:
                     if not event.has_submitted_music:
                         continue
@@ -352,6 +360,13 @@ def generate_report(events):
                     if not confirmed_starts:
                         continue
                     file_out.write("<h2>" + event.name + "</h2>\n")
+                    if event.min_music_length or event.max_music_length:
+                        file_out.write("<div class='time'>")
+                        if event.min_music_length:
+                            file_out.write("Min: " + format_time(event.min_music_length) + " ")
+                        if event.max_music_length:
+                            file_out.write("Max: " + format_time(event.max_music_length))
+                        file_out.write("</div>\n")
                     file_out.write("<table>\n")
                     file_out.write("<tr>\n")
                     file_out.write("<th>Skater</th>\n")
@@ -369,7 +384,7 @@ def generate_report(events):
                         music = ""
                         submit_count = str(len(start.music_submissions))
                         if start.music_length > 0:
-                            music_length = str(datetime.timedelta(seconds=start.music_length))[3:]
+                            music_length = format_time(start.music_length)
                             music = "<a href=" + start.music_key + ".mp3>mp3</a>"
                         if scratch:
                             file_out.write("<tr class='scratch'>\n")
