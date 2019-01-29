@@ -347,8 +347,12 @@ def format_time(seconds):
     return str(datetime.timedelta(seconds=seconds))[3:]
 
 
-def generate_report(events):
-    with open("template.html", "r") as template, open(os.path.join(directory, "music", "index.html"), "w") as file_out:
+def generate_report(events, include_music):
+    if include_music:
+        output_path = os.path.join(directory, "music", "index.html")
+    else:
+        output_path = os.path.join(directory, "index.html")
+    with open("template.html", "r") as template, open(output_path, "w") as file_out:
         for row in template:
             if row == "<!--TIMESTAMP-->\n":
                 file_out.write("<p>Last Updated: ")
@@ -386,7 +390,8 @@ def generate_report(events):
                     if event.has_submitted_music:
                         file_out.write("<th>Music Length</th>\n")
                         file_out.write("<th>Submit Count</th>\n")
-                        file_out.write("<th>Music</th>\n")
+                        if include_music:
+                            file_out.write("<th>Music</th>\n")
                     file_out.write("</tr>\n")
 
                     for start in sorted(confirmed_starts, key=lambda s: s.skater.full_name):
@@ -408,7 +413,8 @@ def generate_report(events):
                         if event.has_submitted_music:
                             file_out.write("<td>" + music_length + "</td>\n")
                             file_out.write("<td>" + submit_count + "</td>\n")
-                            file_out.write("<td>" + music + "</td>\n")
+                            if include_music:
+                                file_out.write("<td>" + music + "</td>\n")
                         file_out.write("</tr>\n")
 
                     file_out.write("</table>\n")
@@ -441,6 +447,19 @@ def read_updated_entries(skaters, events_by_name):
                             print ("Created new start", start, skater.starts)
                 else:  # event header row
                     event = events_by_name[normalize_event_name(name)]
+
+
+def print_counts(events):
+    submitted = 0
+    total = 0
+    for event in events:
+        if event.has_submitted_music:
+            for start in event.starts:
+                if start.confirmed:
+                    total += 1
+                    if start.music_submissions:
+                        submitted += 1
+    print ("Submitted", submitted, "Total", total)
 
 
 def debug_skater(skaters, name):
@@ -490,7 +509,10 @@ def main():
             # read music length
             read_time(start)
 
-    generate_report(events)
+    print_counts(events)
+
+    generate_report(events, True)
+    generate_report(events, False)
 
 
 if __name__ == "__main__":
