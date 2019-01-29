@@ -178,19 +178,21 @@ def read_events():
     return events
 
 
-def create_submission(skater, event_name, url, index,):
-    submission = MusicSubmission(skater, event_name, url, index)
-    for start in skater.starts:
-        if event_name == start.event.short_name:
-            start.music_submissions.append(submission)
-            break
-    else:
-        print ("Warning cannot find start", event_name, skater.starts)
-    return submission
+def create_submission(skater, event_name, url, index):
+    if url:
+        if event_name:
+            submission = MusicSubmission(skater, event_name, url, index)
+            for start in skater.starts:
+                if event_name == start.event.short_name:
+                    start.music_submissions.append(submission)
+                    break
+            else:
+                print ("Warning cannot find start", event_name, skater.starts)
+        else:
+            print ("Missing event name", skater)
 
 
 def read_submissions(skaters):
-    submissions = []
     with open(os.path.join(directory, "input.csv"), "r") as file_in:
         reader = csv.DictReader(file_in)
         for i, row in enumerate(reader):
@@ -206,15 +208,11 @@ def read_submissions(skaters):
                 short_event = row["Short Program Event"]
                 short_url = row["Short Program Music"]
 
-                if free_dance_event and free_dance_url:
-                    submissions.append(create_submission(skater, free_dance_event, free_dance_url, i))
-                if free_skate_event and free_skate_url:
-                    submissions.append(create_submission(skater, free_skate_event, free_skate_url, i))
-                if short_event and short_url:
-                    submissions.append(create_submission(skater, short_event, short_url, i))
+                create_submission(skater, free_dance_event, free_dance_url, i)
+                create_submission(skater, free_skate_event, free_skate_url, i)
+                create_submission(skater, short_event, short_url, i)
             else:
                 print ("Warning cannot find skater", name, email, usfs_number)
-    return submissions
 
 
 def get_cached_music(start, subdir):
@@ -263,7 +261,7 @@ def convert_music(start):
                 title = start.skater.full_name + " " + str(version)
                 album = start.event.name
                 file_extension = os.path.splitext(input_file_name)[1]
-                if file_extension.lower() in [".mp3", ".wav", ".m4a", ".aif", ".aiff", ".wma", ".mp2", ".m4v"]:
+                if file_extension.lower() in [".mp3", ".wav", ".m4a", ".aif", ".aiff", ".wma", ".mp2", ".m4v", ""]:
                     print ("Converting", input_file_name)
                     subprocess.call(["ffmpeg", "-y", "-i", input_path, "-acodec", "mp3", "-ab", "256k", output_path])
                 else:
