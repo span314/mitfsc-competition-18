@@ -8,6 +8,8 @@ import shutil
 import subprocess
 import urllib
 import urlparse
+import cgi
+import string
 
 directory = os.path.abspath("data")
 
@@ -54,6 +56,7 @@ class Skater(object):
         self.last_name = last_name
         self.email = email
         self.university = ""
+        self.notes = ""
         # back-references
         self.starts = []
         # computed properties
@@ -201,6 +204,10 @@ def read_submissions(skaters):
             email = row["Email Address"].strip()
             skater = skaters.find(usfs_number, name, email)
             if skater:
+                notes = row["Notes for Announcer"]
+                if notes:
+                    skater.notes = notes
+
                 free_dance_event = row["Free Dance Event"]
                 free_dance_url = row["Free Dance Music"]
                 free_skate_event = row["Free Skate Event"]
@@ -345,8 +352,8 @@ def format_time(seconds):
     return str(datetime.timedelta(seconds=seconds))[3:]
 
 
-def generate_report(events, include_music):
-    if include_music:
+def generate_report(events, include_details):
+    if include_details:
         output_path = os.path.join(directory, "music", "index.html")
     else:
         output_path = os.path.join(directory, "index.html")
@@ -388,8 +395,9 @@ def generate_report(events, include_music):
                     if event.has_submitted_music:
                         file_out.write("<th>Music Length</th>\n")
                         file_out.write("<th>Submit Count</th>\n")
-                        if include_music:
+                        if include_details:
                             file_out.write("<th>Music</th>\n")
+                            file_out.write("<th>Notes</th>\n")
                     file_out.write("</tr>\n")
 
                     for start in sorted(confirmed_starts, key=lambda s: s.skater.full_name):
@@ -411,8 +419,9 @@ def generate_report(events, include_music):
                         if event.has_submitted_music:
                             file_out.write("<td>" + music_length + "</td>\n")
                             file_out.write("<td>" + submit_count + "</td>\n")
-                            if include_music:
+                            if include_details:
                                 file_out.write("<td>" + music + "</td>\n")
+                                file_out.write("<td>" + cgi.escape(start.skater.notes) + "</td>\n")
                         file_out.write("</tr>\n")
 
                     file_out.write("</table>\n")
@@ -450,6 +459,7 @@ def read_updated_entries(skaters, events_by_name):
 def print_counts(events):
     submitted = 0
     total = 0
+    missing_emails = set()
     for event in events:
         if event.has_submitted_music:
             for start in event.starts:
@@ -457,7 +467,10 @@ def print_counts(events):
                     total += 1
                     if start.music_submissions:
                         submitted += 1
+                    else:
+                        missing_emails.add(start.skater.email)
     print ("Submitted", submitted, "Total", total)
+    print ("Missing", missing_emails)
 
 
 def debug_skater(skaters, name):
