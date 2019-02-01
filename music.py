@@ -364,6 +364,9 @@ def generate_report(events, include_details):
                 file_out.write(datetime.datetime.now().strftime("%A, %B %d %I:%M %P"))
                 file_out.write("</p>\n")
             elif row == "<!--CONTENT-->\n":
+                if include_details:
+                    file_out.write("<h2>National Anthem</h2>\n")
+                    file_out.write("<a href='anthem.m4a'>Anthem</a>")
                 for event in events:
                     confirmed_starts = [start for start in event.starts if start.confirmed]
                     if not confirmed_starts:
@@ -456,10 +459,10 @@ def read_updated_entries(skaters, events_by_name):
                     event = events_by_name[normalize_event_name(name)]
 
 
-def print_counts(events):
+def print_counts(events, print_missing):
     submitted = 0
     total = 0
-    missing_emails = set()
+    missing_skaters = set()
     for event in events:
         if event.has_submitted_music:
             for start in event.starts:
@@ -468,9 +471,17 @@ def print_counts(events):
                     if start.music_submissions:
                         submitted += 1
                     else:
-                        missing_emails.add(start.skater.email)
+                        missing_skaters.add(start.skater)
+    if print_missing:
+        for skater in missing_skaters:
+            print (skater.full_name, skater.email, skater.university)
+            for start in skater.starts:
+                if not start.music_submissions and start.confirmed and start.event.has_submitted_music:
+                    print start.event.name
+
     print ("Submitted", submitted, "Total", total)
-    print ("Missing", missing_emails)
+    print ("Missing Entries", total - submitted, "Missing Skaters", len(missing_skaters))
+    print ("Missing Emails", [skater.email for skater in missing_skaters])
 
 
 def debug_skater(skaters, name):
@@ -520,7 +531,7 @@ def main():
             # read music length
             read_time(start)
 
-    print_counts(events)
+    print_counts(events, True)
 
     generate_report(events, True)
     generate_report(events, False)
